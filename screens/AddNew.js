@@ -1,52 +1,47 @@
-import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ActivityIndicatorBase, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_URL } from '../constants/api';
+import * as SecureStorage from 'expo-secure-store';
 
-const produce = [
-    {
-        name: 'rice',
-        quantinty: 2000,
-    },
-    {
-        name: 'Beans',
-        quantinty: 2000,
-    },
-    {
-        name: 'Wheat',
-        quantinty: 2000,
-    },
-    {
-        name: 'Potatoes',
-        quantinty: 2000,
-    },{
-        name: 'Yam',
-        quantinty: 2000,
-    },{
-        name: 'Tomatoes',
-        quantinty: 2000,
-    },{
-        name: 'Peanuts',
-        quantinty: 2000,
-    },{
-        name: 'Groundnuts',
-        quantinty: 2000,
-    },{
-        name: 'Vegies',
-        quantinty: 2000,
-    },{
-        name: 'Mangoes',
-        quantinty: 2000,
-    },{
-        name: 'Kiwis',
-        quantinty: 2000,
-    }
-
-];
-const AddNew = ({ navigation }) => {
+const AddNew = ({ navigation, route }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [name, setName] = useState('');
     const [quantity, setQuantity] = useState('')
+    const [pesticide, setPesticide] = useState('');
+    const [fertilizer, setFertilizer] = useState('');
+    const [loading, setLoading] = useState(false);
 
+
+    const addNewProduce = async () => {
+        setLoading(true);
+        const payload = {
+            name: name,
+            quantity: parseInt(quantity),
+            pesticide: pesticide,
+            fertilizer: fertilizer
+        };
+
+        const token = await SecureStorage.getItemAsync('token');
+
+        axios.post(`${API_URL}/coop/add_produce`, payload, { 
+            headers: {
+                Authorization: token,
+            }
+        }).then((res) => {
+            setLoading(false);
+            navigation.goBack();
+            Alert.alert('Coperative management', 'Produce is added successful');
+        }).catch((err) => {
+            setLoading(false);
+            console.log(err.response.data)
+        })
+
+
+
+
+    }
   return (
     <View style={{ flex: 1, backgroundColor: '#fff'}}>
         <View style={{
@@ -98,12 +93,12 @@ const AddNew = ({ navigation }) => {
         </View>
         <View>
             <FlatList
-                data={produce}
+                data={route.params.produce}
                 renderItem={({item, index}) => {
                     return(
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '90%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: index % 2 === 0 ? '#fff' : '#64b5c1', padding: 5, borderRadius: 10 }}>
-                            <Text style={{ fontSize: 18, }}>{item.name}</Text>
-                            <Text>{item.quantinty}</Text>
+                            <Text style={{ fontSize: 18, }}>{item?.name}</Text>
+                            <Text>{item?.quantity}</Text>
                         </View>
                     )
                 }}
@@ -124,7 +119,7 @@ const AddNew = ({ navigation }) => {
             }}>
                 <View style={{
                      width: '90%',
-                     height: 330,
+                     minHeight: 330,
                      alignSelf: 'center',
                      margin: 20,
                      backgroundColor: 'white',
@@ -176,7 +171,25 @@ const AddNew = ({ navigation }) => {
                              padding: 10,
                              marginTop: 20,
                         }} />
-                        <TouchableOpacity style={{
+                        <TextInput placeholder='Pesticide' onChangeText={(val) => setPesticide(val)} style={{
+                             width: '100%',
+                             backgroundColor: '#F6F5F7',
+                             height: 50,
+                             borderRadius: 10,
+                             alignSelf: 'center',
+                             padding: 10,
+                             marginTop: 20,
+                        }} />
+                        <TextInput placeholder='Fertilizer' onChangeText={(val) => setFertilizer(val)} style={{
+                             width: '100%',
+                             backgroundColor: '#F6F5F7',
+                             height: 50,
+                             borderRadius: 10,
+                             alignSelf: 'center',
+                             padding: 10,
+                             marginTop: 20,
+                        }} />
+                        <TouchableOpacity onPress={addNewProduce} style={{
                             width: '100%',
                             borderRadius: 10,
                             height: 50,
@@ -186,7 +199,8 @@ const AddNew = ({ navigation }) => {
                             marginTop: 20,
                             backgroundColor: '#64C5B1'
                         }}>
-                            <Text style={{ color: '#fff'}}>Add</Text>
+                            {loading ? <ActivityIndicator size='small' color='#fff' /> : <Text style={{ color: '#fff'}}>Add</Text>}
+                            
                         </TouchableOpacity>
                     </View>
                 </View>

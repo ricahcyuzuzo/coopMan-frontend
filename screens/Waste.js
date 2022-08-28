@@ -1,51 +1,62 @@
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
-import React, { useState } from 'react';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
+import { API_URL } from '../constants/api';
 
-const produce = [
-    {
-        name: 'rice',
-        quantinty: 2000,
-    },
-    {
-        name: 'Beans',
-        quantinty: 2000,
-    },
-    {
-        name: 'Wheat',
-        quantinty: 2000,
-    },
-    {
-        name: 'Potatoes',
-        quantinty: 2000,
-    },{
-        name: 'Yam',
-        quantinty: 2000,
-    },{
-        name: 'Tomatoes',
-        quantinty: 2000,
-    },{
-        name: 'Peanuts',
-        quantinty: 2000,
-    },{
-        name: 'Groundnuts',
-        quantinty: 2000,
-    },{
-        name: 'Vegies',
-        quantinty: 2000,
-    },{
-        name: 'Mangoes',
-        quantinty: 2000,
-    },{
-        name: 'Kiwis',
-        quantinty: 2000,
+const Waste = ({ navigation, route }) => {
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalVisibleSelect, setModalVisibleSelect] = useState(false);
+    const [value, setValue] = useState('');
+    const [quantity, setQuantity] = useState('');
+    const [produce, setProduce] = useState({});
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        getData();
+    }, []);
+
+    const handleAddWasted = async () => {
+        setLoading(true);
+        const payload = {
+            produce_id: produce?.id,
+            value: parseInt(value),
+            quantity: parseInt(quantity)
+        }
+        const token = await SecureStore.getItemAsync('token');
+
+        axios.post(`${API_URL}/coop/add_wasted`, payload, {
+            headers:{
+                Authorization: token
+            }
+        }).then(res => {
+            setLoading(false);
+            navigation.goBack();
+        }).catch((err) => {
+            setLoading(false);
+            console.log(err.response.data);
+        })
     }
 
-];
-const Waste = ({ navigation }) => {
-    const [modalVisible, setModalVisible] = useState(false);
-    const [name, setName] = useState('');
-    const [quantity, setQuantity] = useState('');
+    const getData = () => {
+        const data = [];
+        route.params.produce.forEach(item => {
+            const obj = {
+                label: item.name,
+                value: item._id
+            }
+
+            data.push(obj);
+        });
+        setItems(data);
+        setProduce({
+            name: data[0].label,
+            id: data[0].value
+        });
+        console.log(data)
+    }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff'}}>
@@ -98,12 +109,12 @@ const Waste = ({ navigation }) => {
         </View>
         <View>
             <FlatList
-                data={produce}
+                data={route.params.wasted}
                 renderItem={({item, index}) => {
                     return(
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '90%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: index % 2 === 0 ? '#fff' : '#F99898', padding: 5, borderRadius: 10 }}>
-                            <Text style={{ fontSize: 18, }}>{item.name}</Text>
-                            <Text>{item.quantinty}</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '90%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: index % 2 === 0 ? '#fff' : '#f99898', padding: 5, borderRadius: 10 }}>
+                            <Text style={{ fontSize: 18, }}>{item?.produce?.name}</Text>
+                            <Text>{item?.quantity}</Text>
                         </View>
                     )
                 }}
@@ -124,7 +135,7 @@ const Waste = ({ navigation }) => {
             }}>
                 <View style={{
                      width: '90%',
-                     height: 330,
+                     minHeight: 330,
                      alignSelf: 'center',
                      margin: 20,
                      backgroundColor: 'white',
@@ -159,13 +170,54 @@ const Waste = ({ navigation }) => {
                         width: '100%',
                         marginTop: 30
                     }}>
-                        <TextInput placeholder='Name' onChangeText={(val) => setName(val)} style={{
+                        <TouchableOpacity style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            borderWidth: 1,
+                            borderColor: '#c4c4c4',
+                            padding: 10,
+                            borderRadius: 10,
+                        }} onPress={() => setModalVisibleSelect(!modalVisibleSelect)}>
+                            <Text>{produce?.name}</Text>
+                            <Ionicons name='chevron-down' size={24} />
+                        </TouchableOpacity>
+                        {
+                            modalVisibleSelect ? <View style={styles.dropdown}>
+                            <ScrollView>
+                            {
+                                items.map((item, index) => {
+                                    return (    
+                                        <TouchableOpacity onPress={() => {
+                                            setProduce({
+                                                name: item.label,
+                                                id: item.value
+                                            });
+                                            setModalVisibleSelect(false);
+                                        }} style={{
+                                            width: '90%',
+                                            alignSelf: 'center',
+                                            height: 40,
+                                            justifyContent: 'center',
+                                            borderColor: '#c4c4c4',
+                                            borderTopWidth: 0.5,
+                                            borderBottomWidth: 0.5,
+                                        }} key={index}>
+                                            <Text>{item.label}</Text>
+                                        </TouchableOpacity>
+                                    )
+                                })
+                            }  
+                            </ScrollView>
+                        </View> : null
+                        }
+                        <TextInput placeholder='Value in Money' onChangeText={(val) => setValue(val)} style={{
                              width: '100%',
                              backgroundColor: '#F6F5F7',
                              height: 50,
                              borderRadius: 10,
                              alignSelf: 'center',
-                             padding: 10
+                             padding: 10,
+                             marginTop: 20,
                         }} />
                         <TextInput placeholder='Quantity' onChangeText={(val) => setQuantity(val)} style={{
                              width: '100%',
@@ -176,7 +228,7 @@ const Waste = ({ navigation }) => {
                              padding: 10,
                              marginTop: 20,
                         }} />
-                        <TouchableOpacity style={{
+                        <TouchableOpacity onPress={handleAddWasted} style={{
                             width: '100%',
                             borderRadius: 10,
                             height: 50,
@@ -186,7 +238,7 @@ const Waste = ({ navigation }) => {
                             marginTop: 20,
                             backgroundColor: '#64C5B1'
                         }}>
-                            <Text style={{ color: '#fff'}}>Add</Text>
+                            {loading ? <ActivityIndicator size='small' color='#fff' /> : <Text style={{ color: '#fff'}}>Add</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -198,4 +250,16 @@ const Waste = ({ navigation }) => {
 
 export default Waste
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    dropdown: {
+        width: '100%',
+        minHeight: 50,
+        maxHeight: 300,
+        borderRadius: 10,
+        alignSelf: 'center',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#c4c4c4',
+        marginTop: 10
+    }
+})

@@ -1,111 +1,61 @@
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
+import * as SecureStorage from 'expo-secure-store';
+import AppContext from './Context';
+import axios from 'axios';
+import { API_URL } from '../constants/api';
+import { useFocusEffect } from '@react-navigation/native';
 
-const produce = [
-    {
-        name: 'Potatoes',
-        all: 2000,
-        sold: 1890,
-        wasted: 110
-    },
-    {
-        name: 'Wheat',
-        all: 4000,
-        sold: 2500,
-        wasted: 200
-    },
-    {
-        name: 'Oranges',
-        all: 4320,
-        sold: 4000,
-        wasted: 120
-    },
-]
 
-const produced = [
-    {
-        name: 'rice',
-        quantinty: 2000,
-    },
-    {
-        name: 'Beans',
-        quantinty: 2000,
-    },
-    {
-        name: 'Wheat',
-        quantinty: 2000,
-    },
-    {
-        name: 'Potatoes',
-        quantinty: 2000,
-    }
-];
-
-const wasted = [
-    {
-        name: 'rice',
-        quantinty: 2000,
-    },
-    {
-        name: 'Beans',
-        quantinty: 2000,
-    },
-    {
-        name: 'Wheat',
-        quantinty: 2000,
-    },
-    {
-        name: 'Potatoes',
-        quantinty: 2000,
-    }
-]
-
-const sold = [
-    {
-        name: 'rice',
-        quantinty: 2000,
-    },
-    {
-        name: 'Beans',
-        quantinty: 2000,
-    },
-    {
-        name: 'Wheat',
-        quantinty: 2000,
-    },
-    {
-        name: 'Potatoes',
-        quantinty: 2000,
-    }
-]
 const Home = ({ navigation }) => {
-    const [modalVisible, setModalVisible] = useState(false)
+    const [modalVisible, setModalVisible] = useState(false);
+    const [data, setData] = useState({});
+    const { setLoaded } = useContext(AppContext);
+    useFocusEffect(useCallback(() => {
+        getData();
+    }, []));
+
+
+    const getData = async () => {
+        const token = await SecureStorage.getItemAsync('token');
+        console.log(token)
+        axios.get(`${API_URL}/coop/trans`, {
+            headers: {
+                Authorization: token
+            }
+        }).then((res) => {
+            setData(res.data)
+        }).catch((err) => {
+            console.log(err.response.data);
+        })
+    }
+    const handleLogout = async () => {
+        await SecureStorage.setItemAsync('isLoggedIn', 'false');
+        setLoaded(false)
+    }
+    
   return (
     <View style={styles.container}>
       <View>
         <View style={styles.titleContent}>
-            <Text style={{ marginTop: 10 }}>Hi, Coopanya</Text>
-            <TouchableOpacity style={styles.logout}>
+            <Text style={{ marginTop: 10 }}>Hi, {data?.coopName}</Text>
+            <TouchableOpacity onPress={handleLogout} style={styles.logout}>
                 <Ionicons  name='log-out' color='#64C5B1' size={24}  />
             </TouchableOpacity>
         </View>
-            <TouchableOpacity onPress={() => setModalVisible(!modalVisible)} style={styles.selectBox}>
-                <Text>Rice</Text>
-                <Ionicons name='caret-down' color='#64c5b1'/>
-            </TouchableOpacity>
         <View style={styles.cards}>
-            <TouchableOpacity onPress={() => navigation.navigate('AddNew')} style={styles.produce}>
+            <TouchableOpacity onPress={() => navigation.navigate('AddNew', { produce: data?.data?.produce })} style={styles.produce}>
                 <Text>Produce</Text>
-                <Text style={{ fontSize: 18}}>2,308 Kg</Text>
+                <Text style={{ fontSize: 18}}>{data?.produceQuantity} Kg</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Sold')} style={styles.sold}>
+            <TouchableOpacity onPress={() => navigation.navigate('Sold', { sold: data?.data?.sold, produce: data?.data?.produce })} style={styles.sold}>
                 <Text>Sold</Text>
-                <Text style={{ fontSize: 18}}>2,208 Kg</Text>
+                <Text style={{ fontSize: 18}}>{data?.totalSold} Kg</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Waste')} style={styles.waste}>
+            <TouchableOpacity onPress={() => navigation.navigate('Waste', { wasted: data?.data?.wasted, produce: data?.data?.produce })} style={styles.waste}>
                 <Text>Wasted</Text>
-                <Text style={{ fontSize: 18}}>100 Kg</Text>
+                <Text style={{ fontSize: 18}}>{data?.totalWasted} Kg</Text>
             </TouchableOpacity>
         </View>
       </View>
@@ -118,12 +68,12 @@ const Home = ({ navigation }) => {
         <Text style={{ color: '#64c5b1', fontSize: 16, fontWeight: 'bold', }}>Produce</Text>
         <View>
             <FlatList
-                data={produced.slice(0, 5)}
+                data={data?.data?.produce.slice(0, 4)}
                 renderItem={({item, index}) => {
                     return(
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: '#64b5c1', padding: 5, borderRadius: 10, marginTop: 10, }}>
-                            <Text style={{ fontSize: 18, }}>{item.name}</Text>
-                            <Text>{item.quantinty}</Text>
+                            <Text style={{ fontSize: 18, }}>{item?.name}</Text>
+                            <Text>{item?.quantity}</Text>
                         </View>
                     )
                 }}
@@ -138,12 +88,12 @@ const Home = ({ navigation }) => {
         <Text style={{ color: '#64c5b1', fontSize: 16, fontWeight: 'bold', }}>Sold</Text>
         <View>
             <FlatList
-                data={produced.slice(0, 5)}
+                data={data?.data?.sold?.slice(0, 4)}
                 renderItem={({item, index}) => {
                     return(
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: '#ffd992', padding: 5, borderRadius: 10, marginTop: 10, }}>
-                            <Text style={{ fontSize: 18, }}>{item.name}</Text>
-                            <Text>{item.quantinty}</Text>
+                            <Text style={{ fontSize: 18, }}>{item?.produce?.name}</Text>
+                            <Text>{item?.quantity}</Text>
                         </View>
                     )
                 }}
@@ -160,12 +110,12 @@ const Home = ({ navigation }) => {
         <Text style={{ color: '#64c5b1', fontSize: 16, fontWeight: 'bold', }}>Wasted</Text>
         <View>
             <FlatList
-                data={produced.slice(0, 5)}
+                data={data?.data?.wasted?.slice(0, 4)}
                 renderItem={({item, index}) => {
                     return(
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: '#f99898', padding: 5, borderRadius: 10, marginTop: 10, }}>
-                            <Text style={{ fontSize: 18, }}>{item.name}</Text>
-                            <Text>{item.quantinty}</Text>
+                            <Text style={{ fontSize: 18, }}>{item?.produce?.name}</Text>
+                            <Text>{item?.quantity}</Text>
                         </View>
                     )
                 }}
@@ -212,7 +162,8 @@ const styles = StyleSheet.create({
         width: '90%',
         alignSelf: 'center',
         flexDirection: 'row',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        marginBottom: 10
     },
     logout: {
         width: 40,

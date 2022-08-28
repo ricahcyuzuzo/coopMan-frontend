@@ -1,13 +1,38 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import React, { useContext, useState } from 'react'
+import axios from 'axios';
+import { API_URL } from '../constants/api';
+import * as SecureStore from 'expo-secure-store';
+import AppContext from './Context';
 
 const Login = ({ navigation }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [secured, setSecured] = useState(false)
+    const [secured, setSecured] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const { setLoaded } = useContext(AppContext);
+    const [error, setError] = useState('');
 
     const handleLogin = () => {
-        navigation.navigate('Home')
+        setLoading(true);
+        const payload = {
+            email: username,
+            password,
+        };
+
+        axios.post(`${API_URL}/auth/login`, payload)
+            .then( async res => {
+                setError('');
+                setLoading(false);
+                await SecureStore.setItemAsync('token', res.data.token);
+                await SecureStore.setItemAsync('isLoggedIn', 'true');
+                setLoaded(true);
+            })
+            .catch(err => {
+                setLoading(false);
+                console.log(err)
+                setError(err.response.data.message);
+            });
     }
 
   return (
@@ -19,7 +44,9 @@ const Login = ({ navigation }) => {
         <View style={styles.content}>
             <View style={styles.username}>
                 <TextInput
-                    placeholder='Phone number'
+                    placeholder='Email'
+                    keyboardType='email-address'
+                    autoCapitalize='none'
                     onChangeText={(val) => setUsername(val)} 
                     style={styles.usernameText} 
                 />
@@ -30,11 +57,12 @@ const Login = ({ navigation }) => {
                     placeholder='Password' 
                     onChangeText={(val) => setPassword(val)} 
                     style={styles.passwordText} 
+                    autoCapitalize='none'
                     secureTextEntry={true} />
             </View>
 
             <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
-                <Text style={styles.loginButtonText}>Login</Text>
+                {loading ? <ActivityIndicator size='small' color='white' /> : <Text style={styles.loginButtonText}>Login</Text>}
             </TouchableOpacity>
             <View style={styles.suggestToRegister}>
                 <Text>Don't have an account? </Text>
@@ -42,6 +70,7 @@ const Login = ({ navigation }) => {
                     <Text style={styles.registerText}>Register</Text>
                 </TouchableOpacity>
             </View>
+            <Text style={styles.errorText}>{error}</Text>
         </View>
     </View>
   )
@@ -107,6 +136,11 @@ const styles = StyleSheet.create({
         width: '90%',
         alignSelf: 'center',
         marginTop: 30
+    },
+    errorText: {
+        color: 'red',
+        margin: 20,
+        textAlign: 'center'
     }
 
 })

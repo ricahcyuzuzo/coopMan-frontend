@@ -1,14 +1,33 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useState } from 'react'
+import axios from 'axios';
+import { API_URL } from '../constants/api';
 
 const Register = ({ navigation }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
-    const [secured, setSecured] = useState(false)
+    const [secured, setSecured] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleRegister = () => {
-        
+        setLoading(true);
+        const payload = {
+            cooperative: name,
+            email: username,
+            password,
+        };
+
+        axios.post(`${API_URL}/auth/user`, payload)
+            .then(res => {
+                setLoading(false);
+                navigation.navigate('Login');
+            }).catch(err => {
+                setLoading(false);
+                console.log(err);
+                setError(err.response.data.message);
+            });
     }
 
   return (
@@ -27,9 +46,11 @@ const Register = ({ navigation }) => {
 
             <View style={styles.username}>
                 <TextInput
-                    placeholder='Phone number'
+                    placeholder='Email'
                     onChangeText={(val) => setUsername(val)} 
                     style={styles.usernameText} 
+                    keyboardType='email-address'
+                    autoCapitalize='none'
                 />
             </View>
 
@@ -41,8 +62,8 @@ const Register = ({ navigation }) => {
                     secureTextEntry={secured} />
             </View>
 
-            <TouchableOpacity style={styles.loginButton}>
-                <Text style={styles.loginButtonText}>Register</Text>
+            <TouchableOpacity onPress={handleRegister} style={styles.loginButton}>
+                {loading ? <ActivityIndicator color='#fff' size='small' /> : <Text style={styles.loginButtonText}>Register</Text>}
             </TouchableOpacity>
             <View style={styles.suggestToRegister}>
                 <Text>Don't have an account? </Text>
@@ -50,6 +71,7 @@ const Register = ({ navigation }) => {
                     <Text style={styles.registerText}>Login</Text>
                 </TouchableOpacity>
             </View>
+            <Text style={styles.errorText}>{error}</Text>
         </View>
     </View>
   )
@@ -115,6 +137,11 @@ const styles = StyleSheet.create({
         width: '90%',
         alignSelf: 'center',
         marginTop: 30
+    },
+    errorText: {
+        color: 'red',
+        alignSelf: 'center',
+        marginTop: 10
     }
 
 })
