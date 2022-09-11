@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, TextInput, Modal, ActivityIndicator, ScrollView } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather, AntDesign } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../constants/api';
 import * as SecureStore from 'expo-secure-store';
@@ -8,10 +8,12 @@ import DropDownPicker from 'react-native-dropdown-picker';
 
 const Sold = ({ navigation, route }) => {
     const [modalVisible, setModalVisible] = useState(false);
+    const [modalVisible1, setModalVisible1] = useState(false);
     const [modalVisibleSelect, setModalVisibleSelect] = useState(false);
 
     const [price, setPrice] = useState('');
     const [quantity, setQuantity] = useState('');
+    const [transactionId, setTransactionId] = useState('');
     const [loading, setLoading] = useState(false);
     const [produce, setProduce] = useState({});
     const [items, setItems] = useState([]);
@@ -28,6 +30,45 @@ const Sold = ({ navigation, route }) => {
         const token = await SecureStore.getItemAsync('token');
 
         axios.post(`${API_URL}/coop/sell_produce?produce_id=${produce?.id}`, payload, {
+            headers:{
+                Authorization: token
+            }
+        }).then(res => {
+            setLoading(false);
+            navigation.goBack();
+        }).catch((err) => {
+            setLoading(false);
+            console.log(err.response.data);
+        })
+    }
+
+    const handleUpdateSold = async (trans_id) => {
+        setLoading(true);
+        const payload = {
+            price: parseInt(price),
+            quantity: parseInt(quantity),
+            trans_id
+        }
+        const token = await SecureStore.getItemAsync('token');
+
+        axios.patch(`${API_URL}/coop/update_transaction`, payload, {
+            headers:{
+                Authorization: token
+            }
+        }).then(res => {
+            setLoading(false);
+            navigation.goBack();
+        }).catch((err) => {
+            setLoading(false);
+            console.log(err.response.data);
+        })
+    }
+
+    const handleDeleteSold = async (trans_id) => {
+        setLoading(true);
+        const token = await SecureStore.getItemAsync('token');
+
+        axios.delete(`${API_URL}/coop/delete_transaction/?trans_id=${trans_id}`, {
             headers:{
                 Authorization: token
             }
@@ -113,8 +154,26 @@ const Sold = ({ navigation, route }) => {
                 renderItem={({item, index}) => {
                     return(
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '90%', alignItems: 'center',alignSelf: 'center', height: 50, backgroundColor: index % 2 === 0 ? '#fff' : '#FFD992', padding: 5, borderRadius: 10 }}>
-                            <Text style={{ fontSize: 18, }}>{item?.produce?.name}</Text>
-                            <Text>{item?.produce?.quantity}</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '70%'}}>
+                                <Text style={{ fontSize: 18, }}>{item?.produce?.name}</Text>
+                                <Text>{item?.quantity} Kg</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-around', width: '20%' }}>
+                                <TouchableOpacity onPress={() => {
+                                    setPrice(item.amount);
+                                    setQuantity(item.quantity);
+                                    setTransactionId(item._id)
+                                    setModalVisible1(true)
+                                    console.log(item);
+                                }}>
+                                    <AntDesign name="edit" size={24} color="#000" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => {
+                                    handleDeleteSold(item._id);
+                                }}>
+                                    <AntDesign name="delete" size={24} color="#a12" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     )
                 }}
@@ -244,7 +303,92 @@ const Sold = ({ navigation, route }) => {
                 </View>
             </View>
         </Modal>
-        
+        <Modal 
+            visible={modalVisible1}
+            onRequestClose={() => setModalVisible1(false)}
+            transparent={true}
+
+        >
+            <View style={{
+                flex: 1,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+
+            }}>
+                <View style={{
+                     width: '90%',
+                     minHeight: 330,
+                     alignSelf: 'center',
+                     margin: 20,
+                     backgroundColor: 'white',
+                     borderRadius: 20,
+                     padding: 35,
+                     alignItems: 'center',
+                     shadowColor: '#000',
+                     shadowOffset: {
+                       width: 0,
+                       height: 2,
+                     },
+                     shadowOpacity: 0.25,
+                     shadowRadius: 4,
+                     elevation: 5,
+                }}>
+                    <TouchableOpacity onPress={() => setModalVisible1(false)} style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        width: 40,
+                        height: 40,
+                        borderWidth: 1,
+                        borderColor: '#a12',
+                        borderRadius: 20,
+                    }}>
+                        <Ionicons name='close' color='#a12' size={24} />
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 18}}>Update Sold</Text>
+                    <View style={{
+                        width: '100%',
+                        marginTop: 30
+                    }}>
+                        <TextInput placeholder='Price' value={price} onChangeText={(val) => setPrice(val)} style={{
+                             width: '100%',
+                             backgroundColor: '#F6F5F7',
+                             height: 50,
+                             borderRadius: 10,
+                             alignSelf: 'center',
+                             padding: 10
+                        }} />
+                        <TextInput placeholder='Quantity' value={quantity} onChangeText={(val) => setQuantity(val)} style={{
+                             width: '100%',
+                             backgroundColor: '#F6F5F7',
+                             height: 50,
+                             borderRadius: 10,
+                             alignSelf: 'center',
+                             padding: 10,
+                             marginTop: 20,
+                        }} />
+                        <TouchableOpacity onPress={() => {
+                            handleUpdateSold(transactionId);
+                        }} style={{
+                            width: '100%',
+                            borderRadius: 10,
+                            height: 50,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            alignSelf: 'center',
+                            marginTop: 20,
+                            backgroundColor: '#64C5B1'
+                        }}>
+                            {loading ? <ActivityIndicator size='small' color='#fff' /> : <Text style={{ color: '#fff'}}>Update</Text>}
+                            
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
     </View>
   )
 }
